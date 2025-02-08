@@ -10,7 +10,7 @@ from datetime import timedelta
 # Baca URL dari file CSV
 input_file = "filtered_links.csv"
 urls = pd.read_csv(input_file)["URL"]
-# urls = urls[0:5]  # Untuk contoh, hanya mengambil 5 URL pertama
+# urls = urls[0:200]  # Untuk contoh, hanya mengambil 200 URL pertama
 
 # Rotasi User-Agent
 user_agents = [
@@ -22,7 +22,7 @@ user_agents = [
 
 # Simulasi delay manusiawi
 def human_like_delay():
-    time.sleep(random.uniform(3, 10))  # Delay antara 3 hingga 10 detik
+    time.sleep(random.uniform(3, 15))  # Delay antara 3 hingga 15 detik
 
 # Fungsi scraping untuk setiap URL
 def scrape_url(url, session):
