@@ -11,6 +11,8 @@ import os
 # Baca URL dari file CSV
 input_file = "filtered_links.csv"
 urls = pd.read_csv(input_file)["URL"].tolist()
+start_index = 490  # Indeks awal untuk scraping, error di url 505
+urls = urls[start_index:650]  # Scrape sampai URL ke-n
 
 # Nama file output CSV
 output_file = "hasil_scraping_rumah123.csv"
@@ -94,16 +96,20 @@ start_time = time.time()  # Mulai timer
 all_data = []
 
 with requests.Session() as session:
-    for url in tqdm(urls_to_scrape, desc="Scraping progress"):
+    for i, url in enumerate(tqdm(urls_to_scrape, desc="Scraping progress")):
         # Scrape URL
         data = scrape_url(url, session)
         if data:
             all_data.append(data)
+        else:
+            print(f"Error mengambil data di URL ke-{start_index + i}")
+            print("Proses scraping dihentikan.")
+            break
 
         # Delay manusiawi
         human_like_delay()
 
-# Simpan hasil scraping ke CSV
+# Simpan hasil scraping ke CSV jika ada data yang berhasil diambil
 if all_data:
     # Jika file sudah ada, gabungkan data baru dengan data lama
     if os.path.exists(output_file):
