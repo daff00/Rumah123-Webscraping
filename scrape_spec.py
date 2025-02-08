@@ -6,11 +6,24 @@ import time
 import re
 from tqdm import tqdm
 from datetime import timedelta
+import os
 
 # Baca URL dari file CSV
 input_file = "filtered_links.csv"
-urls = pd.read_csv(input_file)["URL"]
-# urls = urls[0:200]  # Untuk contoh, hanya mengambil 200 URL pertama
+urls = pd.read_csv(input_file)["URL"].tolist()
+
+# Nama file output CSV
+output_file = "hasil_scraping_rumah123.csv"
+
+# Jika file hasil scraping sudah ada, baca URL yang sudah di-scrape
+if os.path.exists(output_file):
+    existing_data = pd.read_csv(output_file)
+    scraped_urls = existing_data["URL"].tolist()
+else:
+    scraped_urls = []
+
+# Filter URL yang belum di-scrape
+urls_to_scrape = [url for url in urls if url not in scraped_urls]
 
 # Rotasi User-Agent
 user_agents = [
@@ -81,7 +94,7 @@ start_time = time.time()  # Mulai timer
 all_data = []
 
 with requests.Session() as session:
-    for url in tqdm(urls, desc="Scraping progress"):
+    for url in tqdm(urls_to_scrape, desc="Scraping progress"):
         # Scrape URL
         data = scrape_url(url, session)
         if data:
@@ -90,11 +103,20 @@ with requests.Session() as session:
         # Delay manusiawi
         human_like_delay()
 
-# Simpan hasil scraping ke file CSV
-output_file = "hasil_scraping_rumah123.csv"
-df = pd.DataFrame(all_data)
-df.to_csv(output_file, index=False)
-print(f"Data scraping telah disimpan ke {output_file}")
+# Simpan hasil scraping ke CSV
+if all_data:
+    # Jika file sudah ada, gabungkan data baru dengan data lama
+    if os.path.exists(output_file):
+        new_data = pd.DataFrame(all_data)
+        combined_data = pd.concat([existing_data, new_data]).drop_duplicates(subset=["URL"])
+    else:
+        combined_data = pd.DataFrame(all_data)
+
+    # Simpan ke file
+    combined_data.to_csv(output_file, index=False)
+    print(f"Scraping selesai. {len(all_data)} data baru ditambahkan. Total {len(combined_data)} data disimpan dalam '{output_file}'.")
+else:
+    print("Tidak ada data baru yang ditemukan.")
 
 # Hitung durasi waktu scraping
 end_time = time.time()

@@ -1,131 +1,94 @@
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-import random
-import time
-import re
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from tqdm import tqdm
-from datetime import timedelta
+import pandas as pd
+import time
 import os
+import random
+from datetime import timedelta, datetime
 
-# Baca URL dari file CSV
-input_file = "filtered_links.csv"
-urls = pd.read_csv(input_file)["URL"].tolist()
+# Inisialisasi WebDriver menggunakan WebDriver Manager
+options = webdriver.ChromeOptions()
+options.add_argument("start-maximized")
+options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+service = Service(ChromeDriverManager().install())
+driver = webdriver.Chrome(service=service, options=options)
+
+# URL awal
+base_url = "https://www.rumah123.com/jual/cari/?location=tangerang&page=1"
+
+# Tunggu halaman termuat
+wait = WebDriverWait(driver, 10)
 
 # Nama file output CSV
-output_file = "hasil_scraping_rumah123.csv"
+output_file = "filtered_links_TEST.csv"
 
-# Jika file hasil scraping sudah ada, baca URL yang sudah di-scrape
+# Jika file CSV sudah ada, baca data lama
 if os.path.exists(output_file):
-    existing_data = pd.read_csv(output_file)
-    scraped_urls = existing_data["URL"].tolist()
+    existing_links = pd.read_csv(output_file)["URL"].tolist()
 else:
-    scraped_urls = []
+    existing_links = []
 
-# Filter URL yang belum di-scrape
-urls_to_scrape = [url for url in urls if url not in scraped_urls]
+# Daftar untuk menyimpan semua link baru
+filtered_links = []
 
-# Rotasi User-Agent
-user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Mobile/15E148 Safari/604.1",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-]
+# Variabel untuk membatasi scraping
+start_page = 451  # Halaman awal yang ingin di-scrape
+end_page = 500    # Halaman akhir yang ingin di-scrape
 
-# Simulasi delay manusiawi
-def human_like_delay():
-    time.sleep(random.uniform(3, 15))  # Delay antara 3 hingga 15 detik
+# Mulai timer
+start_time = datetime.now()
 
-# Fungsi scraping untuk setiap URL
-def scrape_url(url, session):
-    headers = {"User-Agent": random.choice(user_agents)}
+try:
+    with tqdm(total=(end_page - start_page + 1), desc="Scraping Progress", unit="halaman") as pbar:
+        page_counter = start_page
+        while page_counter <= end_page:
+            print(f"Scraping halaman {page_counter}...")
 
-    try:
-        response = session.get(url, headers=headers, timeout=30)
+            # Akses halaman yang sesuai
+            current_url = f"https://www.rumah123.com/jual/cari/?location=tangerang&page={page_counter}"
+            driver.get(current_url)
 
-        # Pastikan request berhasil
-        if response.status_code != 200:
-            print(f"Gagal mengakses URL: {url}, status code: {response.status_code}")
-            return None
+            # Tunggu elemen properti muncul
+            properties = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[title]')))
 
-        # Parse HTML menggunakan BeautifulSoup
-        soup = BeautifulSoup(response.text, "html.parser")
+            # Ambil link dari tiap properti di halaman
+            for property_elem in properties:
+                link = property_elem.get_attribute('href')
+                if 'hos' in link and 'properti' in link and 'perumahan-baru' not in link and link not in existing_links and link not in filtered_links:
+                    filtered_links.append(link)
 
-        # Mengambil harga rumah
-        harga_elem = soup.select_one('div.flex.items-baseline.gap-x-1 span.text-primary.font-bold')
-        harga = harga_elem.text.strip() if harga_elem else None
+            # Cek apakah sudah mencapai batas halaman
+            if page_counter == end_page:
+                print(f"Telah mencapai batas halaman {end_page}. Scraping selesai.")
+                break
 
-        # Mengambil lokasi
-        lokasi_elem = soup.select_one('p.text-xs.text-gray-500.mb-2')
-        lokasi = lokasi_elem.text.strip() if lokasi_elem else None
+            page_counter += 1  # Tambah penghitung halaman
+            pbar.update(1)  # Update progress bar
 
-        # Mengambil spesifikasi
-        spesifikasi = {}
-        spesifikasi_elems = soup.find_all('div', class_=re.compile(r'flex.*gap-4.*'))
-        if spesifikasi_elems:
-            for elem in spesifikasi_elems:
-                key_elem = elem.select_one('p.w-32.text-xs.font-light.text-gray-500')
-                value_elem = elem.select_one('p:nth-of-type(2)')
-                if key_elem and value_elem:
-                    key = key_elem.text.strip()
-                    value = value_elem.text.strip()
-                    spesifikasi[key] = value
+            # Tambahkan jeda acak antara 2 hingga 15 detik
+            time.sleep(random.uniform(2, 15))
 
-        # Menambahkan informasi tambahan jika tidak tersedia
-        if "Lainnya" not in spesifikasi:
-            spesifikasi["Lainnya"] = "Informasi tambahan tidak tersedia"
+finally:
+    # Tutup browser
+    driver.quit()
 
-        # Membuat dictionary hasil scraping
-        data = {
-            "URL": url,
-            "Harga": harga,
-            "Lokasi": lokasi,
-            **spesifikasi
-        }
-        return data
+# Hitung durasi scraping
+end_time = datetime.now()
+duration = end_time - start_time
+formatted_duration = str(timedelta(seconds=int(duration.total_seconds())))
+print(f"Durasi scraping: {formatted_duration}")
 
-    except Exception as e:
-        print(f"Error saat scraping URL {url}: {e}")
-        return None
-
-# Main scraping process
-start_time = time.time()  # Mulai timer
-all_data = []
-
-with requests.Session() as session:
-    for url in tqdm(urls_to_scrape, desc="Scraping progress"):
-        # Scrape URL
-        data = scrape_url(url, session)
-        if data:
-            all_data.append(data)
-
-        # Delay manusiawi
-        human_like_delay()
-
-# Simpan hasil scraping ke CSV
-if all_data:
-    # Jika file sudah ada, gabungkan data baru dengan data lama
-    if os.path.exists(output_file):
-        new_data = pd.DataFrame(all_data)
-        combined_data = pd.concat([existing_data, new_data]).drop_duplicates(subset=["URL"])
-    else:
-        combined_data = pd.DataFrame(all_data)
-
-    # Simpan ke file
-    combined_data.to_csv(output_file, index=False)
-    print(f"Scraping selesai. {len(all_data)} data baru ditambahkan. Total {len(combined_data)} data disimpan dalam '{output_file}'.")
+# Simpan hasil ke CSV
+if filtered_links:
+    all_links = existing_links + filtered_links
+    df = pd.DataFrame(all_links, columns=["URL"])
+    df.to_csv(output_file, index=False)
+    print(f"Scraping selesai. {len(filtered_links)} link baru ditambahkan. Total {len(all_links)} link disimpan dalam '{output_file}'.")
 else:
-    print("Tidak ada data baru yang ditemukan.")
-
-# Hitung durasi waktu scraping
-end_time = time.time()
-elapsed_time = end_time - start_time
-
-# Format durasi
-if elapsed_time < 3600:
-    formatted_time = str(timedelta(seconds=int(elapsed_time)))  # Format MM:SS
-else:
-    formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))  # Format HH:MM:SS
-
-print(f"Durasi scraping: {formatted_time}")
+    print("Tidak ada link baru yang ditemukan.")
