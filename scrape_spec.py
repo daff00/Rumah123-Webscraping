@@ -12,8 +12,8 @@ import winsound
 # Baca URL dari file CSV
 input_file = "filtered_links.csv"
 urls = pd.read_csv(input_file)["URL"].tolist()
-start_index = 1911  # Indeks awal untuk scraping
-urls = urls[start_index:2100]  # Scrape sampai URL ke-n
+start_index = 2501  # Indeks awal untuk scraping
+urls = urls[start_index:3500]  # Scrape sampai URL ke-n
 
 # Nama file output CSV
 output_file = "hasil_scraping_rumah123.csv"
@@ -74,6 +74,9 @@ def scrape_url(url, session, max_retries=3):
                 print(f"Error 429: Terlalu banyak permintaan. Menunggu 10 menit sebelum mencoba lagi...")
                 time.sleep(600)  # Jeda 10 menit untuk error 429
                 continue
+            elif response.status_code == 404:
+                print(f"Error 404: URL tidak ditemukan: {url}")
+                return None
             elif response.status_code != 200:
                 print(f"Gagal mengakses URL: {url}, status code: {response.status_code}")
                 time.sleep(2 ** attempt)  # Exponential backoff
