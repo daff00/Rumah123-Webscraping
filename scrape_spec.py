@@ -12,8 +12,8 @@ import winsound
 # Baca URL dari file CSV
 input_file = "filtered_links.csv"
 urls = pd.read_csv(input_file)["URL"].tolist()
-start_index = 2501  # Indeks awal untuk scraping
-urls = urls[start_index:3500]  # Scrape sampai URL ke-n
+start_index = 2908  # Indeks awal untuk scraping
+urls = urls[start_index:3206]  # Scrape sampai URL ke-n
 
 # Nama file output CSV
 output_file = "hasil_scraping_rumah123.csv"
