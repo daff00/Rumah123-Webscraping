@@ -12,8 +12,8 @@ import winsound
 # Baca URL dari file CSV
 input_file = "filtered_links.csv"
 urls = pd.read_csv(input_file)["URL"].tolist()
-start_index = 2908  # Indeks awal untuk scraping
-urls = urls[start_index:3206]  # Scrape sampai URL ke-n
+start_index = 3604  # Indeks awal untuk scraping
+urls = urls[start_index:4000]  # Scrape sampai URL ke-n
 
 # Nama file output CSV
 output_file = "hasil_scraping_rumah123.csv"
@@ -36,7 +36,6 @@ with open(user_agent_file, "r") as f:
 used_user_agents = []  # Daftar User-Agent yang sudah digunakan
 
 # Fungsi untuk memilih User-Agent secara random dengan aturan
-
 def get_random_user_agent():
     global used_user_agents
 
@@ -75,8 +74,8 @@ def scrape_url(url, session, max_retries=3):
                 time.sleep(600)  # Jeda 10 menit untuk error 429
                 continue
             elif response.status_code == 404:
-                print(f"Error 404: URL tidak ditemukan: {url}")
-                return None
+                print(f"Error 404: URL tidak ditemukan: {url}. Melewati URL ini.")
+                return None  # Skip URL
             elif response.status_code != 200:
                 print(f"Gagal mengakses URL: {url}, status code: {response.status_code}")
                 time.sleep(2 ** attempt)  # Exponential backoff
@@ -137,9 +136,7 @@ try:
             if data:
                 all_data.append(data)
             else:
-                print(f"Error mengambil data di URL ke-{start_index + i}")
-                print("Proses scraping dihentikan.")
-                break
+                print(f"Error mengambil data di URL ke-{start_index + i}. Melewati URL ini.")
 
             # Delay manusiawi
             human_like_delay()
