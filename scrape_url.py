@@ -26,7 +26,7 @@ base_url = "https://www.rumah123.com/jual/cari/?location=tangerang&page=1"
 wait = WebDriverWait(driver, 10)
 
 # Nama file output CSV
-output_file = "filtered_links_TEST.csv"
+output_file = "filtered_links.csv"
 
 # Jika file CSV sudah ada, baca data lama
 if os.path.exists(output_file):
@@ -38,8 +38,8 @@ else:
 filtered_links = []
 
 # Variabel untuk membatasi scraping
-start_page = 451  # Halaman awal yang ingin di-scrape
-end_page = 500    # Halaman akhir yang ingin di-scrape
+start_page = 501  # Halaman awal yang ingin di-scrape
+end_page = 600    # Halaman akhir yang ingin di-scrape
 
 # Mulai timer
 start_time = datetime.now()
