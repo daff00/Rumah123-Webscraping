@@ -1,5 +1,2 @@
-# Ignore archive folder
-archive/
-
-# Ignore olx folder
-olx/
+OLX/
+Archive/
